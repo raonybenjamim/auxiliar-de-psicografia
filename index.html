@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auxiliar de Psicografia</title>
+    <style>
+        :root {
+            --bg-color: #0f0914;
+            --accent-primary: #dcb4f8;
+            --accent-secondary: #b583e2;
+            --text-color: #eaddf5;
+            --font-family: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Area: Actions and Text */
+        .top-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: transparent;
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: var(--font-family);
+            font-size: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:active {
+            background-color: var(--accent-primary);
+            color: var(--bg-color);
+        }
+
+        .text-window {
+            flex: 1;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(220, 180, 248, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 24px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            pointer-events: auto;
+            touch-action: pan-y;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        /* Middle Area: Character Ribbon */
+        .ribbon-area {
+            height: 120px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            overflow: hidden;
+            mask-image: linear-gradient(to right, transparent, black 30%, black 70%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 30%, black 70%, transparent);
+            background-color: rgba(20, 10, 25, 0.5);
+            border-top: 1px solid rgba(220, 180, 248, 0.1);
+            border-bottom: 1px solid rgba(220, 180, 248, 0.1);
+        }
+
+        .pointer {
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            left: 50%;
+            width: 2px;
+            background-color: var(--accent-primary);
+            transform: translateX(-50%);
+            z-index: 5;
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .pointer::before, .pointer::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+        }
+        .pointer::before {
+            top: -6px;
+            border-top-color: var(--accent-primary);
+        }
+        .pointer::after {
+            bottom: -6px;
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .ribbon-container {
+            display: flex;
+            align-items: center;
+            will-change: transform;
+        }
+
+        .char-item {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent-secondary);
+            width: 50px;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: 0 0 5px rgba(181, 131, 226, 0.5);
+        }
+        
+        .char-item.special {
+            font-size: 24px;
+            color: var(--accent-primary);
+        }
+
+        /* Bottom Area: Dial */
+        .dial-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .dial-base {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #2a1f38 0%, #170e20 100%);
+            border: 2px solid rgba(220, 180, 248, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+
+        .dial-knob {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            will-change: transform;
+        }
+
+        .dial-indicator {
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-primary);
+            border-radius: 50%;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 15px var(--accent-primary);
+        }
+        
+        .dial-center {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #0f0914;
+            border-radius: 50%;
+            border: 1px solid rgba(220, 180, 248, 0.1);
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-area">
+        <div class="actions">
+            <button id="btn-save">Salvar Texto</button>
+            <button id="btn-clear">Limpar</button>
+        </div>
+        <div class="text-window" id="text-window"></div>
+    </div>
+
+    <div class="ribbon-area">
+        <div class="pointer"></div>
+        <div class="ribbon-container" id="ribbon-container"></div>
+    </div>
+
+    <div class="dial-area">
+        <div class="dial-base" id="dial-base">
+            <div class="dial-knob" id="dial-knob">
+                <div class="dial-indicator"></div>
+            </div>
+            <div class="dial-center"></div>
+        </div>
+    </div>
+
+    <script>
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const NUMBERS = '0123456789'.split('');
+        const SYMBOLS = ['.', ',', '!', '?', '-'];
+        const SPECIALS = ['␣', '⌫'];
+        
+        const baseChars = [...ALPHABET, ...NUMBERS, ...SYMBOLS, ...SPECIALS];
+        
+        const ribbonContainer = document.getElementById('ribbon-container');
+        const textWindow = document.getElementById('text-window');
+        const dialBase = document.getElementById('dial-base');
+        const dialKnob = document.getElementById('dial-knob');
+        const btnSave = document.getElementById('btn-save');
+        const btnClear = document.getElementById('btn-clear');
+
+        let currentChars = [];
+        let textContent = "";
+        let dialAngle = 0;
+        let lastDialAngle = 0;
+        let isDragging = false;
+        let ribbonOffset = 0;
+        
+        const CHAR_WIDTH = 50; 
+        
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function renderRibbon() {
+            ribbonContainer.innerHTML = '';
+            
+            // Generate 15 copies to allow continuous spin without edge hit
+            const copies = 15;
+            const middleCopyIndex = Math.floor(copies / 2);
+            
+            const renderedChars = Array.from({length: copies}).flatMap(() => currentChars);
+            
+            renderedChars.forEach(char => {
+                const div = document.createElement('div');
+                div.className = 'char-item';
+                if(char === '␣' || char === '⌫') div.classList.add('special');
+                div.textContent = char;
+                ribbonContainer.appendChild(div);
+            });
+            
+            const middleBlockStartIndex = currentChars.length * middleCopyIndex;
+            const centerOfScreen = window.innerWidth / 2;
+            const itemOffset = (middleBlockStartIndex * CHAR_WIDTH) + (CHAR_WIDTH / 2);
+            
+            ribbonOffset = centerOfScreen - itemOffset;
+            applyRibbonTransform();
+        }
+
+        function applyRibbonTransform(animate = false) {
+            if (animate) {
+                ribbonContainer.style.transition = 'transform 0.2s ease-out';
+            } else {
+                ribbonContainer.style.transition = 'none';
+            }
+            ribbonContainer.style.transform = `translateX(${ribbonOffset}px)`;
+        }
+
+        function init() {
+            currentChars = shuffleArray(baseChars);
+            renderRibbon();
+            textWindow.textContent = textContent;
+        }
+
+        function getAngle(x, y) {
+            const rect = dialBase.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            let angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) + 90;
+            if (angle < 0) angle += 360;
+            return angle;
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            lastDialAngle = getAngle(clientX, clientY);
+            ribbonContainer.style.transition = 'none';
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault(); 
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            let currentAngle = getAngle(clientX, clientY);
+            let deltaAngle = currentAngle - lastDialAngle;
+            
+            if (deltaAngle > 180) deltaAngle -= 360;
+            if (deltaAngle < -180) deltaAngle += 360;
+            
+            dialAngle += deltaAngle;
+            lastDialAngle = currentAngle;
+            
+            dialKnob.style.transform = `rotate(${dialAngle}deg)`;
+            
+            if (Math.abs(deltaAngle) > 0 && Math.floor(dialAngle / 10) !== Math.floor((dialAngle - deltaAngle) / 10)) {
+                if (navigator.vibrate) navigator.vibrate(5);
+            }
+            
+            const PIXELS_PER_DEGREE = -2;
+            ribbonOffset += (deltaAngle * PIXELS_PER_DEGREE);
+            
+            applyRibbonTransform();
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            snapAndSelect();
+        }
+
+        function snapAndSelect() {
+            const centerOfScreen = window.innerWidth / 2;
+            const items = ribbonContainer.children;
+            let closestIndex = 0;
+            let minDistance = Infinity;
+            let closestCenterAbs = 0;
+            
+            for (let i = 0; i < items.length; i++) {
+                const rect = items[i].getBoundingClientRect();
+                const itemCenterAbs = rect.left + rect.width / 2;
+                const distance = Math.abs(centerOfScreen - itemCenterAbs);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = i;
+                    closestCenterAbs = itemCenterAbs;
+                }
+            }
+            
+            const selectedChar = items[closestIndex].textContent;
+            const snapDelta = centerOfScreen - closestCenterAbs;
+            ribbonOffset += snapDelta;
+            
+            applyRibbonTransform(true);
+            if (navigator.vibrate) navigator.vibrate(15);
+            
+            setTimeout(() => {
+                if (selectedChar === '⌫') {
+                    textContent = textContent.slice(0, -1);
+                } else if (selectedChar === '␣') {
+                    textContent += ' ';
+                } else {
+                    textContent += selectedChar;
+                }
+                
+                textWindow.textContent = textContent;
+                textWindow.scrollTop = textWindow.scrollHeight;
+                
+                currentChars = shuffleArray(baseChars);
+                renderRibbon();
+            }, 250); 
+        }
+        
+        dialBase.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', doDrag);
+        window.addEventListener('mouseup', endDrag);
+        
+        dialBase.addEventListener('touchstart', startDrag, {passive: false});
+        window.addEventListener('touchmove', doDrag, {passive: false});
+        window.addEventListener('touchend', endDrag);
+
+        window.addEventListener('resize', () => {
+            if(!isDragging) renderRibbon();
+        });
+
+        btnClear.addEventListener('click', () => {
+            if (confirm("Apagar todo o texto?")) {
+                textContent = '';
+                textWindow.textContent = '';
+            }
+        });
+
+        btnSave.addEventListener('click', () => {
+            if (!textContent) return alert("Não há texto para salvar.");
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `psicografia_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        init();
+        
+    </script>
+</body>
+</html>
